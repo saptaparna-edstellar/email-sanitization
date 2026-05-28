@@ -1,84 +1,104 @@
-// Orchestrates Layers 1–7 before any AI call
-import { normalizeEmail }      from './normalizeEmail';
-import { validateSyntax }      from './validateSyntax';
-import { deduplicateEmails }   from './deduplicateEmails';
-import { correctDomainTypo }   from './correctTypos';
-import { checkBlocklist }      from './checkBlocklist';
-import { checkMX }             from './checkMX';
-import { scoreRisk }           from './scoreRisk';
+import { normalizeEmail }                    from './normalizeEmail';
+import { validateSyntax }                    from './validateSyntax';
+import { deduplicateEmails }                 from './deduplicateEmails';
+import { correctDomainTypo }                 from './correctTypos';
+import { checkBlocklist }                    from './checkBlocklist';
+import { checkMX }                           from './checkMX';
+import { scoreRisk }                         from './scoreRisk';
+import { detectSuspiciousLocal, isCustomDomain } from './detectSuspicious';
 
 export async function runPipeline(emails, onProgress) {
-  // Layer 3 — deduplicate first so we don't waste checks on exact copies
   const normalized = emails.map(normalizeEmail);
   const { unique, dupeMap } = deduplicateEmails(normalized);
 
-  const decided  = new Map(); // original normalized → result object
-  const needsAI  = [];        // emails that passed pre-checks but need AI confirmation
+  const decided = new Map();
+  const needsAI = [];
 
   for (let i = 0; i < unique.length; i++) {
     const email = unique[i];
     onProgress(i + 1, unique.length, 'Pre-check');
 
-    // Layer 2 — syntax
+    // ── Layer 2: Syntax ───────────────────────────────────────────────────
     const syntax = validateSyntax(email);
     if (!syntax.valid) {
-      decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: syntax.issue, layer: 2 });
+      decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: syntax.issue });
       continue;
     }
 
-    // Layer 4 — typo correction
-    const typo = correctDomainTypo(email);
+    const [local, domain] = email.split('@');
+
+    // ── Layer 4: Typo correction ──────────────────────────────────────────
+    const typo    = correctDomainTypo(email);
     const working = typo.corrected;
 
-    // Layer 5 — blocklist
+    // ── Layer 5: Blocklist ────────────────────────────────────────────────
     const block = checkBlocklist(working);
     if (block.blocked) {
-      decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: block.reason, layer: 5 });
+      decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: block.reason });
       continue;
     }
 
-    // Layer 6 — MX / DNS check
-    const domain = working.split('@')[1];
-    const hasMX  = await checkMX(domain);
+    // ── Layer 5b: Suspicious blocklist (disposable / role-based) ─────────
+    if (block.suspicious) {
+      decided.set(email, { original: email, cleaned: working, status: 'suspicious', issue: block.reason });
+      continue;
+    }
+
+    // ── Layer 6: MX / DNS ─────────────────────────────────────────────────
+    const workingDomain = working.split('@')[1];
+    const hasMX = await checkMX(workingDomain);
     if (!hasMX) {
+      decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: 'Domain has no mail server (MX record missing)' });
+      continue;
+    }
+
+    // ── Suspicious: random / junk local part ─────────────────────────────
+    const pattern = detectSuspiciousLocal(local);
+    if (pattern.suspicious) {
+      decided.set(email, { original: email, cleaned: working, status: 'suspicious', issue: pattern.reason });
+      continue;
+    }
+
+    // ── Suspicious: custom company domain ────────────────────────────────
+    if (isCustomDomain(workingDomain)) {
       decided.set(email, {
-        original: email, cleaned: working, status: 'invalid',
-        issue: 'Domain has no mail server (MX record missing)', layer: 6,
+        original: email,
+        cleaned:  working,
+        status:   'suspicious',
+        issue:    `Custom company domain — verify mailbox manually`,
       });
       continue;
     }
 
-    // Layer 7 — risk score
+    // ── Layer 7: Risk score ───────────────────────────────────────────────
     const risk = scoreRisk({
       syntaxValid:   true,
       mxExists:      hasMX,
-      notDisposable: !block.blocked,
+      notDisposable: !block.suspicious,
       typoFixed:     typo.fixed,
       roleBased:     block.flag,
     });
 
-    if (risk.action === 'accept' && !typo.fixed && !block.flag) {
-      // High confidence valid — skip AI entirely
-      decided.set(email, { original: email, cleaned: working, status: 'valid', issue: 'None', layer: 7 });
+    if (risk.action === 'accept' && !typo.fixed) {
+      decided.set(email, { original: email, cleaned: working, status: 'valid', issue: 'None' });
     } else if (risk.action === 'reject') {
-      decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: 'Low confidence score', layer: 7 });
+      decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: 'Low confidence score' });
     } else {
-      // Medium risk or has a typo — pass to AI for deeper analysis
+      // Medium risk or typo fixed — let AI confirm
       needsAI.push({ original: email, preCleaned: working, typoFixed: typo.fixed, typoNote: typo.correction });
     }
   }
 
-  // Re-attach duplicates using the decision made for the canonical email
+  // ── Duplicates ────────────────────────────────────────────────────────
   const dupeResults = [];
   for (const [dupe, canonical] of dupeMap.entries()) {
     const base = decided.get(canonical);
-    if (base) {
-      dupeResults.push({
-        ...base,
-        original: dupe,
-        issue: `Duplicate of ${canonical}${base.issue !== 'None' ? ` — ${base.issue}` : ''}`,
-      });
-    }
+    dupeResults.push({
+      original: dupe,
+      cleaned:  base ? base.cleaned : dupe,
+      status:   'duplicate',
+      issue:    `Duplicate of ${canonical}`,
+    });
   }
 
   return { decided, needsAI, dupeResults };

@@ -1,22 +1,27 @@
 import React from 'react';
 
 const CARDS = [
-  { key: 'total',   label: 'Total',        icon: '📊', variant: 'total',   filter: () => true },
-  { key: 'clean',   label: 'Valid + Fixed', icon: '✅', variant: 'valid',   filter: (r) => r.status === 'valid' || r.status === 'fixed' },
-  { key: 'invalid', label: 'Invalid',       icon: '🚫', variant: 'invalid', filter: (r) => r.status === 'invalid' },
-  { key: 'error',   label: 'Errors',        icon: '⚠️', variant: 'error',   filter: (r) => r.status === 'error' },
+  { key: 'total',      label: 'Total',      icon: '📊', variant: 'total',      filter: ()  => true },
+  { key: 'valid',      label: 'Valid',       icon: '✅', variant: 'valid',      filter: (r) => r.status === 'valid' },
+  { key: 'fixed',      label: 'Fixed',       icon: '🔧', variant: 'fixed',      filter: (r) => r.status === 'fixed' },
+  { key: 'suspicious', label: 'Suspicious',  icon: '⚠️', variant: 'suspicious', filter: (r) => r.status === 'suspicious' },
+  { key: 'duplicate',  label: 'Duplicate',   icon: '🔁', variant: 'duplicate',  filter: (r) => r.status === 'duplicate' },
+  { key: 'invalid',    label: 'Invalid',     icon: '🚫', variant: 'invalid',    filter: (r) => r.status === 'invalid' },
 ];
 
 function StatsBar({ results, onCardClick }) {
   const counts = {
-    total:   results.length,
-    clean:   results.filter((r) => r.status === 'valid' || r.status === 'fixed').length,
-    invalid: results.filter((r) => r.status === 'invalid').length,
-    error:   results.filter((r) => r.status === 'error').length,
+    total:      results.length,
+    valid:      results.filter((r) => r.status === 'valid').length,
+    fixed:      results.filter((r) => r.status === 'fixed').length,
+    suspicious: results.filter((r) => r.status === 'suspicious').length,
+    duplicate:  results.filter((r) => r.status === 'duplicate').length,
+    invalid:    results.filter((r) => r.status === 'invalid').length,
   };
 
+  // Only show cards that have at least 1 result (except Total always shown)
   const visibleCards = CARDS.filter(
-    (c) => c.key !== 'error' || counts.error > 0
+    (c) => c.key === 'total' || counts[c.key] > 0
   );
 
   return (

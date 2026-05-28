@@ -413,6 +413,25 @@ body {
   box-shadow: 0 6px 20px rgba(17,153,142,0.5);
 }
 
+.stat-fixed {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+  box-shadow: 0 6px 20px rgba(247,151,30,0.45);
+  color: #78350f;
+}
+
+.stat-fixed .stat-label,
+.stat-fixed .stat-pct { color: #92400e; }
+
+.stat-suspicious {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  box-shadow: 0 6px 20px rgba(249,115,22,0.5);
+}
+
+.stat-duplicate {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  box-shadow: 0 6px 20px rgba(124,58,237,0.5);
+}
+
 .stat-invalid {
   background: linear-gradient(135deg, #f953c6 0%, #ef4444 100%);
   box-shadow: 0 6px 20px rgba(249,83,198,0.45);
@@ -529,10 +548,12 @@ body {
 .results-table tbody tr:hover td { background: #f5f3ff !important; }
 
 /* Row tints */
-.row-valid   td { background: #fff; }
-.row-fixed   td { background: linear-gradient(90deg, #fffbeb, #fff); }
-.row-invalid td { background: linear-gradient(90deg, #fff5f5, #fff); }
-.row-error   td { background: linear-gradient(90deg, #fef2f2, #fff); }
+.row-valid      td { background: #fff; }
+.row-fixed      td { background: linear-gradient(90deg, #fffbeb, #fff); }
+.row-suspicious td { background: linear-gradient(90deg, #fff7ed, #fff); }
+.row-duplicate  td { background: linear-gradient(90deg, #f5f3ff, #fff); }
+.row-invalid    td { background: linear-gradient(90deg, #fff5f5, #fff); }
+.row-error      td { background: linear-gradient(90deg, #fef2f2, #fff); }
 
 .row-num {
   color: #cbd5e1;
@@ -599,6 +620,20 @@ body {
   border: 1px solid #fcd34d;
 }
 .badge-fixed::before { background: #f59e0b; box-shadow: 0 0 4px #f59e0b; }
+
+.badge-suspicious {
+  background: linear-gradient(90deg, #ffedd5, #fed7aa);
+  color: #7c2d12;
+  border: 1px solid #fb923c;
+}
+.badge-suspicious::before { background: #f97316; box-shadow: 0 0 4px #f97316; }
+
+.badge-duplicate {
+  background: linear-gradient(90deg, #ede9fe, #ddd6fe);
+  color: #4c1d95;
+  border: 1px solid #a78bfa;
+}
+.badge-duplicate::before { background: #7c3aed; box-shadow: 0 0 4px #7c3aed; }
 
 .badge-invalid {
   background: linear-gradient(90deg, #fee2e2, #fecaca);

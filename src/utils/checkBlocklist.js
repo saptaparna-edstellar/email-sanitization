@@ -30,18 +30,19 @@ export function checkBlocklist(email) {
 
   const [local, domain] = email.split('@');
 
+  // Disposable → suspicious (not hard invalid — let human decide)
   if (DISPOSABLE.has(domain))
-    return { blocked: true, flag: false, reason: 'Disposable/temporary email domain' };
+    return { blocked: false, suspicious: true, flag: false, reason: 'Disposable/temporary email domain' };
 
   if (RESERVED_DOMAINS.has(domain))
-    return { blocked: true, flag: false, reason: 'Reserved or internal domain' };
+    return { blocked: true, suspicious: false, flag: false, reason: 'Reserved or internal domain' };
 
   for (const tld of INVALID_TLDS)
     if (domain.endsWith(tld))
-      return { blocked: true, flag: false, reason: `Invalid TLD (${tld})` };
+      return { blocked: true, suspicious: false, flag: false, reason: `Invalid TLD (${tld})` };
 
   if (ROLE_BASED.has(local))
-    return { blocked: false, flag: true, reason: 'Role-based address (e.g. info@, admin@)' };
+    return { blocked: false, suspicious: true, flag: true, reason: 'Role-based address (e.g. info@, admin@)' };
 
-  return { blocked: false, flag: false, reason: null };
+  return { blocked: false, suspicious: false, flag: false, reason: null };
 }

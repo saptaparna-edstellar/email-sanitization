@@ -1,0 +1,17 @@
+export const SAMPLE_EMAILS = [
+  'john.doe@gmail.com',
+  'jane.smith@gmial.com',
+  'contact@yahooo.com',
+  'test@@example.com',
+  'noatsignexample.com',
+  'spaces in email@gmail.com',
+  'UPPERCASE@HOTMAIL.COM',
+  'double..dot@example.com',
+  'user@hotmial.com',
+  'valid@company.org',
+  'missing.domain@',
+  'user@.com',
+  'another.valid@email.co.uk',
+  'typo@gmal.com',
+  'outlook@outlok.com',
+];

@@ -81,7 +81,7 @@ function App() {
               <p className="header-sub">7-layer AI-powered email validation pipeline</p>
             </div>
           </div>
-          <span className="header-badge">Powered by Claude</span>
+          {/* <span className="header-badge">Powered by Claude</span> */}
         </div>
       </header>
 

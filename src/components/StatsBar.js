@@ -7,6 +7,7 @@ const CARDS = [
   { key: 'suspicious', label: 'Suspicious',  icon: '⚠️', variant: 'suspicious', filter: (r) => r.status === 'suspicious' },
   { key: 'duplicate',  label: 'Duplicate',   icon: '🔁', variant: 'duplicate',  filter: (r) => r.status === 'duplicate' },
   { key: 'invalid',    label: 'Invalid',     icon: '🚫', variant: 'invalid',    filter: (r) => r.status === 'invalid' },
+  { key: 'blocked',    label: 'Blocked',     icon: '🛑', variant: 'blocked',    filter: (r) => r.status === 'blocked' },
 ];
 
 function StatsBar({ results, onCardClick }) {
@@ -17,6 +18,7 @@ function StatsBar({ results, onCardClick }) {
     suspicious: results.filter((r) => r.status === 'suspicious').length,
     duplicate:  results.filter((r) => r.status === 'duplicate').length,
     invalid:    results.filter((r) => r.status === 'invalid').length,
+    blocked:    results.filter((r) => r.status === 'blocked').length,
   };
 
   // Only show cards that have at least 1 result (except Total always shown)

@@ -17,13 +17,14 @@ async function checkMXServer(domain) {
   if (cached && Date.now() - cached.ts < TTL) return cached.hasMX;
 
   try {
-    const records = await dns.resolveMx(domain);
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('DNS timeout'), { code: 'ETIMEOUT' })), 5000));
+    const records = await Promise.race([dns.resolveMx(domain), timeout]);
     const hasMX   = Array.isArray(records) && records.length > 0;
     cache.set(domain, { hasMX, ts: Date.now() });
     return hasMX;
   } catch (err) {
-    // ENOTFOUND = domain does not exist at all → no MX
-    // All other errors (timeout, servfail) → give benefit of the doubt
+    // ENOTFOUND = domain does not exist → no MX
+    // ETIMEOUT / other errors → give benefit of the doubt
     const hasMX = err.code !== 'ENOTFOUND';
     cache.set(domain, { hasMX, ts: Date.now() });
     return hasMX;

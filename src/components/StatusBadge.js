@@ -6,6 +6,7 @@ const CONFIG = {
   suspicious: { label: 'Suspicious', cls: 'badge-suspicious' },
   duplicate:  { label: 'Duplicate',  cls: 'badge-duplicate'  },
   invalid:    { label: 'Invalid',    cls: 'badge-invalid'    },
+  blocked:    { label: 'Blocked',    cls: 'badge-blocked'    },
   error:      { label: 'Error',      cls: 'badge-error'      },
 };
 

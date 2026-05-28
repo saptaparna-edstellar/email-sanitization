@@ -437,6 +437,11 @@ body {
   box-shadow: 0 6px 20px rgba(249,83,198,0.45);
 }
 
+.stat-blocked {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+  box-shadow: 0 6px 20px rgba(124,58,237,0.45);
+}
+
 .stat-error {
   background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
   box-shadow: 0 6px 20px rgba(247,151,30,0.45);
@@ -641,6 +646,13 @@ body {
   border: 1px solid #fca5a5;
 }
 .badge-invalid::before { background: #ef4444; box-shadow: 0 0 4px #ef4444; }
+
+.badge-blocked {
+  background: linear-gradient(90deg, #1e1e2e, #2d1b4e);
+  color: #e2b4ff;
+  border: 1px solid #7c3aed;
+}
+.badge-blocked::before { background: #7c3aed; box-shadow: 0 0 4px #7c3aed; }
 
 .badge-error {
   background: linear-gradient(90deg, #fce7f3, #fbcfe8);

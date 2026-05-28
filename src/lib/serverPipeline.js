@@ -39,11 +39,17 @@ export async function runServerPipeline(rawEmails, jobId) {
   for (let i = 0; i < unique.length; i++) {
     const email   = unique[i];
     const [local] = email.split('@');
+    // Check original domain against blocklist BEFORE typo correction
+    // so disposable domains like mmaily.com aren't corrected to mail.com first
+    const origBlock = checkBlocklist(email);
+    if (origBlock.blocked)    { decided.set(email, { original: email, cleaned: email,    status: 'blocked',    issue: origBlock.reason }); continue; }
+    if (origBlock.suspicious) { decided.set(email, { original: email, cleaned: email,    status: 'suspicious', issue: origBlock.reason }); continue; }
+
     const typo    = correctDomainTypo(email);
     const working = typo.corrected;
     const block   = checkBlocklist(working);
 
-    if (block.blocked) { decided.set(email, { original: email, cleaned: working, status: 'invalid',    issue: block.reason });   continue; }
+    if (block.blocked)    { decided.set(email, { original: email, cleaned: working, status: 'blocked',    issue: block.reason }); continue; }
     if (block.suspicious) { decided.set(email, { original: email, cleaned: working, status: 'suspicious', issue: block.reason }); continue; }
 
     const pattern = detectSuspiciousLocal(local);

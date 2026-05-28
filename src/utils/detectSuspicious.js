@@ -32,8 +32,12 @@ function isSequentialNumbers(str) {
 
 function isHighEntropy(str) {
   if (str.length < 6) return false;
-  const unique = new Set(str.replace(/[0-9]/g, '')).size;
-  return (unique / str.length) > 0.85 && str.length <= 8 && /[^aeiou]{4,}/.test(str);
+  const lettersOnly = str.replace(/[0-9]/g, '');
+  const unique = new Set(lettersOnly).size;
+  const vowelCount = (lettersOnly.match(/[aeiou]/g) || []).length;
+  const vowelRatio = lettersOnly.length > 0 ? vowelCount / lettersOnly.length : 0;
+  // Real names have vowels (25%+); truly random strings like xjbtkp have almost none
+  return (unique / str.length) > 0.85 && str.length <= 8 && /[^aeiou]{4,}/.test(str) && vowelRatio < 0.2;
 }
 
 export function detectSuspiciousLocal(local) {

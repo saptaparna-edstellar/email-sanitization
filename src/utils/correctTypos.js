@@ -58,6 +58,11 @@ export function correctDomainTypo(email) {
     };
   }
 
+  // Already a known domain — no correction needed
+  if (KNOWN_DOMAINS.includes(domain)) {
+    return { corrected: email, fixed: false, correction: null };
+  }
+
   // Levenshtein ≤ 2 against known domains
   for (const known of KNOWN_DOMAINS) {
     if (levenshtein(domain, known) <= 2 && domain !== known) {

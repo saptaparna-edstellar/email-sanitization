@@ -4,9 +4,10 @@ import StatusBadge from './StatusBadge';
 const PAGE_SIZE = 100;
 
 function ModalActionButtons({ row, overrides, onOverride }) {
-  const key    = row.cleaned || row.original;
+  const key    = row._overrideKey || row.cleaned || row.original;
   const action = overrides[key];
-  const status = row._originalStatus || row.status;
+  const rawStatus = row._originalStatus || row.status;
+  const status = action === 'undone' ? 'invalid' : rawStatus;
 
   if (status === 'suspicious' || status === 'invalid' || status === 'blocked') {
     return (
@@ -14,12 +15,12 @@ function ModalActionButtons({ row, overrides, onOverride }) {
         <button
           className={`action-btn approve-btn ${action === 'approved' ? 'active' : ''}`}
           title="Approve — move to Valid"
-          onClick={() => onOverride(key, action === 'approved' ? null : 'approved', row)}
+          onClick={() => onOverride(key, 'approved', row)}
         >✓ Approve</button>
         <button
           className={`action-btn reject-btn ${action === 'rejected' ? 'active' : ''}`}
           title="Reject — confirm as-is"
-          onClick={() => onOverride(key, action === 'rejected' ? null : 'rejected', row)}
+          onClick={() => onOverride(key, 'rejected', row)}
         >✗ Reject</button>
       </div>
     );
@@ -31,12 +32,12 @@ function ModalActionButtons({ row, overrides, onOverride }) {
         <button
           className={`action-btn retrieve-btn ${action === 'retrieved' ? 'active' : ''}`}
           title="Confirm fix — move to Valid"
-          onClick={() => onOverride(key, action === 'retrieved' ? null : 'retrieved', row)}
+          onClick={() => onOverride(key, 'retrieved', row)}
         >✓ Confirm</button>
         <button
           className={`action-btn reject-btn ${action === 'undone' ? 'active' : ''}`}
           title="Undo fix — restore original"
-          onClick={() => onOverride(key, action === 'undone' ? null : 'undone', row)}
+          onClick={() => onOverride(key, 'undone', row)}
         >↩ Undo</button>
       </div>
     );
@@ -48,6 +49,7 @@ function ModalActionButtons({ row, overrides, onOverride }) {
 function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} }) {
   const [page, setPage] = useState(1);
   const isDuplicate = title === 'Duplicate';
+  const isFixed     = title === 'Fixed';
 
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
@@ -75,7 +77,7 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
               <tr>
                 <th>#</th>
                 <th>Original Email</th>
-                {!isDuplicate && <th>Cleaned Email</th>}
+                {isFixed && <th>Cleaned Email</th>}
                 <th>Status</th>
                 <th>Issue</th>
                 {!isDuplicate && <th>Actions</th>}
@@ -86,10 +88,8 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
                 <tr key={start + i} className={row._overridden ? 'row-overridden' : ''}>
                   <td className="modal-row-num">{start + i + 1}</td>
                   <td className="modal-email original">{row.original}</td>
-                  {!isDuplicate && (
-                    <td className="modal-email cleaned">
-                      {row.cleaned}
-                    </td>
+                    {isFixed && (
+                    <td className="modal-email cleaned was-changed">{row.cleaned}</td>
                   )}
                   <td><StatusBadge status={row.status} /></td>
                   <td className="modal-issue">{row.issue}</td>

@@ -27,9 +27,10 @@ function ResultsTable({ results }) {
               <tr key={start + i} className={`row-${row.status}${row._overridden ? ' row-overridden' : ''}`}>
                 <td className="row-num">{start + i + 1}</td>
                 <td className="email-cell original">{row.original}</td>
-                <td className="email-cell cleaned">
-                  {row.status === 'duplicate' ? <span className="cell-dash">—</span> : row.cleaned}
-                </td>
+                {row.status === 'fixed'
+                  ? <td className="email-cell cleaned was-changed">{row.cleaned}</td>
+                  : <td className="email-cell cleaned"><span className="cell-dash">—</span></td>
+                }
                 <td><StatusBadge status={row.status} /></td>
                 <td className="issue-cell">{row.issue}</td>
               </tr>

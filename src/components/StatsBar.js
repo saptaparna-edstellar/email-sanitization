@@ -3,7 +3,7 @@ import React from 'react';
 const CARDS = [
   { key: 'total',      label: 'Total',      icon: '📊', variant: 'total',      filter: ()  => true },
   { key: 'valid',      label: 'Valid',       icon: '✅', variant: 'valid',      filter: (r) => r.status === 'valid' },
-  { key: 'fixed',      label: 'Fixed',       icon: '🔧', variant: 'fixed',      filter: (r) => r.status === 'fixed' },
+  { key: 'fixed',      label: 'Fixed',       icon: '🔧', variant: 'fixed',      filter: (r) => r.status === 'fixed' || (r._originalStatus === 'fixed' && r.status === 'invalid') },
   { key: 'suspicious', label: 'Suspicious',  icon: '⚠️', variant: 'suspicious', filter: (r) => r.status === 'suspicious' },
   { key: 'duplicate',  label: 'Duplicate',   icon: '🔁', variant: 'duplicate',  filter: (r) => r.status === 'duplicate' },
   { key: 'invalid',    label: 'Invalid',     icon: '🚫', variant: 'invalid',    filter: (r) => r.status === 'invalid' },

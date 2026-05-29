@@ -14,14 +14,22 @@ function ResultsTable({ results }) {
       <div className="table-container">
         <table className="results-table">
           <thead>
-            <tr><th>#</th><th>Original Email</th><th>Cleaned Email</th><th>Status</th><th>Issue</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Original Email</th>
+              <th>Cleaned Email</th>
+              <th>Status</th>
+              <th>Issue</th>
+            </tr>
           </thead>
           <tbody>
             {rows.map((row, i) => (
-              <tr key={start + i} className={`row-${row.status}`}>
+              <tr key={start + i} className={`row-${row.status}${row._overridden ? ' row-overridden' : ''}`}>
                 <td className="row-num">{start + i + 1}</td>
                 <td className="email-cell original">{row.original}</td>
-                <td className={`email-cell cleaned ${row.original !== row.cleaned ? 'was-changed' : ''}`}>{row.cleaned}</td>
+                <td className="email-cell cleaned">
+                  {row.status === 'duplicate' ? <span className="cell-dash">—</span> : row.cleaned}
+                </td>
                 <td><StatusBadge status={row.status} /></td>
                 <td className="issue-cell">{row.issue}</td>
               </tr>

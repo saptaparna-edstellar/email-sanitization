@@ -35,7 +35,7 @@ function StatsBar({ results, onCardClick }) {
           <div
             key={card.key}
             className={`stat-card stat-${card.variant} stat-clickable`}
-            onClick={() => onCardClick(card.label, results.filter(card.filter))}
+            onClick={() => onCardClick(card.label, card.filter)}
             title={`Click to view ${card.label} emails`}
           >
             <div className="stat-icon">{card.icon}</div>

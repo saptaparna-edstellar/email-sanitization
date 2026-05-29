@@ -9,9 +9,12 @@ import { checkAllDomains }                       from './serverMX';
 import { runAIBatches }                          from './serverAI';
 import { updateJob }                             from './jobStore';
 
-export async function runServerPipeline(rawEmails, jobId) {
+export async function runServerPipeline(rawEmails, jobId, learned = {}) {
   const update = (patch) => updateJob(jobId, patch);
   const total  = rawEmails.length;
+  const trustedDomains = new Set(learned.trustedDomains || []);
+  const trustedEmails  = new Set(learned.trustedEmails  || []);
+  const blockedEmails  = new Set(learned.blockedEmails  || []);
 
   // Layer 1: Normalize
   update({ phase: 'Normalizing…', current: 0, total });
@@ -22,6 +25,8 @@ export async function runServerPipeline(rawEmails, jobId) {
   const decided     = new Map();
   const syntaxValid = [];
   for (const email of normalized) {
+    if (blockedEmails.has(email)) { decided.set(email, { original: email, cleaned: email, status: 'blocked',  issue: 'Previously rejected by user' }); continue; }
+    if (trustedEmails.has(email)) { decided.set(email, { original: email, cleaned: email, status: 'valid',    issue: 'Previously approved by user' }); syntaxValid.push(email); continue; }
     const syntax = validateSyntax(email);
     if (!syntax.valid) decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: syntax.issue });
     else syntaxValid.push(email);
@@ -73,7 +78,8 @@ export async function runServerPipeline(rawEmails, jobId) {
 
     if (!hasMX) { decided.set(email, { original: email, cleaned: working, status: 'invalid', issue: 'Domain has no mail server (MX not found)' }); continue; }
 
-    if (isCustomDomain(domain)) { decided.set(email, { original: email, cleaned: working, status: 'suspicious', issue: 'Custom company domain — verify mailbox manually' }); continue; }
+    // Trusted domain (user approved previously) → skip custom domain check
+    if (isCustomDomain(domain) && !trustedDomains.has(domain)) { decided.set(email, { original: email, cleaned: working, status: 'suspicious', issue: 'Custom company domain — verify mailbox manually' }); continue; }
 
     const risk = scoreRisk({ syntaxValid: true, mxExists: hasMX, notDisposable: !block.suspicious, typoFixed: typo.fixed, roleBased: block.flag });
 

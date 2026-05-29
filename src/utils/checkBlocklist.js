@@ -1,4 +1,10 @@
-// Layer 5 — disposable domains, role-based, reserved, invalid TLDs
+// Layer 5 — disposable domains, role-based, blocked locals, reserved, invalid TLDs
+
+// Local parts that are always blocked regardless of domain
+const BLOCKED_LOCALS = new Set([
+  'seo','free','spam','nospam','trash','junk','throwaway','temporary',
+  'fake','void','null','delete','unsubscribe','donotreply','do-not-reply',
+]);
 
 const DISPOSABLE = new Set([
   // Mailinator family
@@ -89,6 +95,10 @@ export function checkBlocklist(email) {
   if (!email.includes('@')) return { blocked: false, flag: false, reason: null };
 
   const [local, domain] = email.split('@');
+
+  // Blocked local parts (seo, free, spam, etc.)
+  if (BLOCKED_LOCALS.has(local))
+    return { blocked: true, suspicious: false, flag: false, reason: `Blocked local address (${local}@)` };
 
   // Disposable → blocked (intentionally fake, no human review needed)
   if (DISPOSABLE.has(domain))

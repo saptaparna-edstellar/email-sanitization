@@ -13,9 +13,16 @@ export function parseCSV(file) {
           return;
         }
 
-        // Prefer a column literally named "email", else fall back to first column
+        // Find the email column by common names, else fall back to first column
+        const EMAIL_PATTERNS = [
+          'email', 'e-mail', 'email address', 'email id', 'emailid',
+          'mail', 'mail id', 'mailid', 'email_address', 'email_id',
+          'emailaddress', 'e_mail', 'user email', 'useremail',
+          'contact email', 'contactemail', 'work email', 'workemail',
+        ];
         const emailCol =
-          headers.find((h) => h.trim().toLowerCase() === 'email') || headers[0];
+          headers.find((h) => EMAIL_PATTERNS.includes(h.trim().toLowerCase())) ||
+          headers[0];
 
         const emails = results.data
           .map((row) => (row[emailCol] || '').toString().trim())

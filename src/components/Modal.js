@@ -75,14 +75,21 @@ function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditing
 }
 
 function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} }) {
-  const [page, setPage]             = useState(1);
-  const [editingKey, setEditingKey] = useState(null);
-  const [editValue, setEditValue]   = useState('');
-  const [selected, setSelected]     = useState(new Set());
-  const [bulkConfirm, setBulkConfirm] = useState(null); // null | 'selected' | 'all'
+  const [page, setPage]               = useState(1);
+  const [editingKey, setEditingKey]   = useState(null);
+  const [editValue, setEditValue]     = useState('');
+  const [selected, setSelected]       = useState(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(null);
+  const [issueFilter, setIssueFilter] = useState('');
 
   const isDuplicate = title === 'Duplicate';
   const showActions = !isDuplicate;
+
+  // Unique issues for filter dropdown
+  const issueOptions = [...new Set(results.map(r => r.issue).filter(Boolean))].sort();
+
+  // Filtered results based on selected issue
+  const filteredResults = issueFilter ? results.filter(r => r.issue === issueFilter) : results;
 
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape' && !editingKey && !bulkConfirm) onClose(); };
@@ -91,10 +98,11 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
   }, [onClose, editingKey, bulkConfirm]);
 
   useEffect(() => { setEditingKey(null); setSelected(new Set()); }, [page]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [issueFilter]);
 
-  const totalPages  = Math.ceil(results.length / PAGE_SIZE);
+  const totalPages  = Math.ceil(filteredResults.length / PAGE_SIZE);
   const start       = (page - 1) * PAGE_SIZE;
-  const rows        = results.slice(start, start + PAGE_SIZE);
+  const rows        = filteredResults.slice(start, start + PAGE_SIZE);
   const pageKeys    = rows.map(r => r._overrideKey || r.cleaned || r.original);
   const allPageSelected = pageKeys.length > 0 && pageKeys.every(k => selected.has(k));
   const somePageSelected = pageKeys.some(k => selected.has(k));
@@ -132,8 +140,7 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
     setBulkConfirm(null);
   };
 
-  const selectedRows  = results.filter(r => selected.has(r._overrideKey || r.cleaned || r.original));
-  const allKeys       = results.map(r => r._overrideKey || r.cleaned || r.original);
+  const allKeys = filteredResults.map(r => r._overrideKey || r.cleaned || r.original);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -143,7 +150,10 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
         <div className="modal-header">
           <div>
             <h2 className="modal-title">{title}</h2>
-            <p className="modal-subtitle">{results.length.toLocaleString()} email{results.length !== 1 ? 's' : ''}</p>
+            <p className="modal-subtitle">
+              {issueFilter ? `${filteredResults.length} of ${results.length}` : results.length.toLocaleString()} email{results.length !== 1 ? 's' : ''}
+              {issueFilter && ' (filtered)'}
+            </p>
           </div>
           <div className="modal-header-actions">
             {showActions && (
@@ -156,6 +166,28 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
             <button className="modal-close" onClick={onClose}>✕</button>
           </div>
         </div>
+
+        {/* Issue filter bar */}
+        {issueOptions.length > 0 && (
+          <div className="modal-filter-bar">
+            <span className="modal-filter-label">Filter by issue:</span>
+            <select
+              className="modal-filter-select"
+              value={issueFilter}
+              onChange={e => setIssueFilter(e.target.value)}
+            >
+              <option value="">All ({results.length})</option>
+              {issueOptions.map(issue => (
+                <option key={issue} value={issue}>
+                  {issue} ({results.filter(r => r.issue === issue).length})
+                </option>
+              ))}
+            </select>
+            {issueFilter && (
+              <button className="modal-filter-clear" onClick={() => setIssueFilter('')}>✕ Clear</button>
+            )}
+          </div>
+        )}
 
         {/* Bulk action bar */}
         {showActions && selected.size > 0 && !bulkConfirm && (

@@ -153,7 +153,7 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
           <div className="pagination modal-pagination">
             <button className="page-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>
             <button className="page-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
-            <span className="page-info">Page {page} of {totalPages.toLocaleString()}<span className="page-range"> ({(start+1).toLocaleString()}–{Math.min(start+PAGE_SIZE, results.length).toLocaleString()} of {results.length.toLocaleString()})</span></span>
+            <span className="page-info">Page {page} of {totalPages.toLocaleString()} <span className="page-range">({(start+1).toLocaleString()}–{Math.min(start+PAGE_SIZE, results.length).toLocaleString()} of {results.length.toLocaleString()})</span></span>
             <button className="page-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
             <button className="page-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
           </div>

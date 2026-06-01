@@ -17,7 +17,7 @@ async function checkMXServer(domain) {
   if (cached && Date.now() - cached.ts < TTL) return cached.hasMX;
 
   try {
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('DNS timeout'), { code: 'ETIMEOUT' })), 5000));
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('DNS timeout'), { code: 'ETIMEOUT' })), 2000));
     const records = await Promise.race([dns.resolveMx(domain), timeout]);
     const hasMX   = Array.isArray(records) && records.length > 0;
     cache.set(domain, { hasMX, ts: Date.now() });
@@ -33,11 +33,6 @@ async function checkMXServer(domain) {
 
 export async function checkAllDomains(emails) {
   const domains = [...new Set(emails.map(e => e.split('@')[1]).filter(Boolean))];
-  const result  = new Map();
-  for (let i = 0; i < domains.length; i += 50) {
-    const chunk   = domains.slice(i, i + 50);
-    const checked = await Promise.all(chunk.map(d => checkMXServer(d).then(ok => [d, ok])));
-    for (const [d, ok] of checked) result.set(d, ok);
-  }
-  return result;
+  const checked = await Promise.all(domains.map(d => checkMXServer(d).then(ok => [d, ok])));
+  return new Map(checked);
 }

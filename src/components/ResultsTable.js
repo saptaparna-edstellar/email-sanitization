@@ -26,8 +26,8 @@ function ResultsTable({ results }) {
               <tr key={start + i} className={`row-${row.status}${row._overridden ? ' row-overridden' : ''}`}>
                 <td className="row-num">{start + i + 1}</td>
                 <td className="email-cell">
-                  {row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
-                  {row.cleaned && row.cleaned !== row.original && (
+                  {row.issue && row.issue.toLowerCase().includes('fixed') && row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
+                  {row.issue && row.issue.toLowerCase().includes('fixed') && row.cleaned && row.cleaned !== row.original && (
                     <span className="email-original-sub">{row.original}</span>
                   )}
                 </td>

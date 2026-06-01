@@ -236,8 +236,8 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
                     )}
                     <td className="modal-row-num">{start + i + 1}</td>
                     <td className="modal-email original">
-                      {row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
-                      {row.cleaned && row.cleaned !== row.original && (
+                      {row.issue && row.issue.toLowerCase().includes('fixed') && row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
+                      {row.issue && row.issue.toLowerCase().includes('fixed') && row.cleaned && row.cleaned !== row.original && (
                         <span className="email-original-sub">{row.original}</span>
                       )}
                       {isManuallyApproved && <span className="manually-approved-tag">manually approved</span>}

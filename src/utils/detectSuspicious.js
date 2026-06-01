@@ -96,11 +96,6 @@ export function detectInvalidLocal(local) {
   // Role-based: admin, info, support
   if (ROLE_LOCALS.has(l)) return `Role-based address — not a personal email (${l}@)`;
 
-  // Name + 4-digit birth year: john1990, name2001
-  if (/^[a-z]{2,}(19\d{2}|20[0-2]\d)$/.test(l)) return 'Name + birth year pattern';
-
-  // Name + 2-digit age: boy18, girl21, user25
-  if (/^[a-z]{3,}(1[3-9]|[2-9]\d)$/.test(l)) return 'Name + age pattern';
 
   // Excessive numbers mixed in (abc1234567 etc.)
   const digitRatio = (l.match(/\d/g) || []).length / l.length;

@@ -619,6 +619,19 @@ body {
 .fix-btn:hover  { background: #fef08a; }
 .fix-btn.active { background: #ca8a04; color: #fff; border-color: #ca8a04; }
 
+.reject-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  animation: fadeIn 0.15s ease;
+}
+.reject-confirm-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  white-space: nowrap;
+}
+
 .fix-edit { display: flex; gap: 0.3rem; align-items: center; }
 .fix-input {
   flex: 1; min-width: 160px;

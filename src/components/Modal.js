@@ -4,10 +4,10 @@ import StatusBadge from './StatusBadge';
 const PAGE_SIZE = 100;
 
 function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditingKey, editValue, setEditValue }) {
-  const key       = row._overrideKey || row.cleaned || row.original;
-  const action    = overrides[key];
-  const rawStatus = row._originalStatus || row.status;
-  const isFixed   = typeof action === 'string' && action.startsWith('fixed:');
+  const key                                     = row._overrideKey || row.cleaned || row.original;
+  const action                                  = overrides[key];
+  const isFixed                                 = typeof action === 'string' && action.startsWith('fixed:');
+  const [confirmingReject, setConfirmingReject] = useState(false);
 
   // Inline fix editor
   if (editingKey === key) {
@@ -35,17 +35,34 @@ function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditing
     );
   }
 
+  // Reject confirmation
+  if (confirmingReject) {
+    return (
+      <div className="reject-confirm">
+        <span className="reject-confirm-text">Are you sure?</span>
+        <button
+          className="action-btn reject-btn active"
+          onClick={() => { onOverride(key, 'rejected', row); setConfirmingReject(false); }}
+        >Yes, Reject</button>
+        <button
+          className="action-btn fix-cancel-btn"
+          onClick={() => setConfirmingReject(false)}
+        >Cancel</button>
+      </div>
+    );
+  }
+
   return (
     <div className="action-btns">
       <button
         className={`action-btn approve-btn ${action === 'approved' ? 'active' : ''}`}
-        title="Approve — move to Valid"
+        title="Approve — stay where it is"
         onClick={() => onOverride(key, 'approved', row)}
       >✓ Approve</button>
       <button
         className={`action-btn reject-btn ${action === 'rejected' ? 'active' : ''}`}
-        title="Reject — keep as Invalid"
-        onClick={() => onOverride(key, 'rejected', row)}
+        title="Reject — flip to opposite status"
+        onClick={() => action === 'rejected' ? onOverride(key, 'rejected', row) : setConfirmingReject(true)}
       >✗ Reject</button>
       <button
         className={`action-btn fix-btn ${isFixed ? 'active' : ''}`}

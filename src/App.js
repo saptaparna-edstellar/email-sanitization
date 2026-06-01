@@ -192,11 +192,6 @@ function App() {
               <p className="header-sub">7-layer AI-powered email validation pipeline</p>
             </div>
           </div>
-          {learnedInfo.count > 0 && (
-            <span className="header-badge learned-badge" title={`Trusted domains: ${learnedInfo.trustedDomains.join(', ') || 'none'}`}>
-              {/* 🧠 AI learned {learnedInfo.count} pattern{learnedInfo.count !== 1 ? 's' : ''} */}
-            </span>
-          )}
           <button className="changelog-trigger-btn" onClick={() => setDrawerOpen(true)} title="View change log">
             &#x1F4CB; Changes
             {changeLog.length > 0 && <span className="changelog-trigger-count">{changeLog.length}</span>}

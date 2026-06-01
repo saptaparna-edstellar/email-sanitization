@@ -1,30 +1,21 @@
 import React from 'react';
 
 const CARDS = [
-  { key: 'total',      label: 'Total',      icon: '📊', variant: 'total',      filter: ()  => true },
-  { key: 'valid',      label: 'Valid',       icon: '✅', variant: 'valid',      filter: (r) => r.status === 'valid' },
-  { key: 'fixed',      label: 'Fixed',       icon: '🔧', variant: 'fixed',      filter: (r) => r.status === 'fixed' || (r._originalStatus === 'fixed' && r.status === 'invalid') },
-  { key: 'suspicious', label: 'Suspicious',  icon: '⚠️', variant: 'suspicious', filter: (r) => r.status === 'suspicious' },
-  { key: 'duplicate',  label: 'Duplicate',   icon: '🔁', variant: 'duplicate',  filter: (r) => r.status === 'duplicate' },
-  { key: 'invalid',    label: 'Invalid',     icon: '🚫', variant: 'invalid',    filter: (r) => r.status === 'invalid' },
-  { key: 'blocked',    label: 'Blocked',     icon: '🛑', variant: 'blocked',    filter: (r) => r.status === 'blocked' },
+  { key: 'total',     label: 'Total',     icon: '📊', variant: 'total',     filter: ()  => true },
+  { key: 'valid',     label: 'Valid',     icon: '✅', variant: 'valid',     filter: (r) => r.status === 'valid' },
+  { key: 'invalid',   label: 'Invalid',   icon: '🚫', variant: 'invalid',   filter: (r) => r.status === 'invalid' || (r._originalStatus === 'invalid' && r.status === 'invalid') },
+  { key: 'duplicate', label: 'Duplicate', icon: '🔁', variant: 'duplicate', filter: (r) => r.status === 'duplicate' },
 ];
 
 function StatsBar({ results, onCardClick }) {
   const counts = {
-    total:      results.length,
-    valid:      results.filter((r) => r.status === 'valid').length,
-    fixed:      results.filter((r) => r.status === 'fixed').length,
-    suspicious: results.filter((r) => r.status === 'suspicious').length,
-    duplicate:  results.filter((r) => r.status === 'duplicate').length,
-    invalid:    results.filter((r) => r.status === 'invalid').length,
-    blocked:    results.filter((r) => r.status === 'blocked').length,
+    total:     results.length,
+    valid:     results.filter((r) => r.status === 'valid').length,
+    invalid:   results.filter((r) => r.status === 'invalid').length,
+    duplicate: results.filter((r) => r.status === 'duplicate').length,
   };
 
-  // Only show cards that have at least 1 result (except Total always shown)
-  const visibleCards = CARDS.filter(
-    (c) => c.key === 'total' || counts[c.key] > 0
-  );
+  const visibleCards = CARDS.filter((c) => c.key === 'total' || counts[c.key] > 0);
 
   return (
     <div className="stats-bar">

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import UploadZone    from './components/UploadZone';
-import ResultsTable  from './components/ResultsTable';
-import StatsBar      from './components/StatsBar';
-import Modal         from './components/Modal';
+import UploadZone       from './components/UploadZone';
+import ResultsTable     from './components/ResultsTable';
+import StatsBar         from './components/StatsBar';
+import Modal            from './components/Modal';
+import ChangeLogDrawer  from './components/ChangeLogDrawer';
 import { downloadCSV }   from './utils/downloadCSV';
 import { SAMPLE_EMAILS } from './utils/sampleData';
 
@@ -25,6 +26,8 @@ function App() {
   const [modal, setModal]               = useState({ open: false, title: '', filter: null });
   const [overrides, setOverrides]       = useState({});  // { cleanedEmail: 'approved'|'rejected'|'retrieved' }
   const [learnedInfo, setLearnedInfo]   = useState({ count: 0, trustedDomains: [] });
+  const [changeLog, setChangeLog]       = useState([]);
+  const [drawerOpen, setDrawerOpen]     = useState(false);
   const pollRef                         = useRef(null);
 
   const openModal  = (title, filter) => setModal({ open: true, title, filter });
@@ -43,13 +46,19 @@ function App() {
 
   // Apply overrides on top of raw results for display + CSV
   const displayResults = useMemo(() => results.map(r => {
-    const key = r.cleaned || r.original;
+    const key    = r.cleaned || r.original;
     const action = overrides[key];
     if (!action) return r;
-    if (action === 'approved')  return { ...r, status: 'valid',   issue: 'Manually approved',        _overridden: true, _originalStatus: r.status };
-    if (action === 'retrieved') return { ...r, status: 'valid',   issue: 'Fix confirmed',             _overridden: true, _originalStatus: r.status };
-    if (action === 'undone')    return { ...r, status: 'invalid', cleaned: r.original, issue: 'Fix undone — original restored', _overridden: true, _originalStatus: r.status, _overrideKey: key };
-    if (action === 'rejected')  return { ...r, _overridden: true, _originalStatus: r.status };
+    if (action === 'approved') return { ...r, status: 'valid', issue: 'Manually approved', _overridden: true, _originalStatus: r.status };
+    if (action === 'rejected') {
+      const flipped = r.status === 'valid' ? 'invalid' : 'valid';
+      const issue   = flipped === 'valid' ? 'Decision rejected — moved to valid' : 'Decision rejected — moved to invalid';
+      return { ...r, status: flipped, issue, _overridden: true, _originalStatus: r.status };
+    }
+    if (typeof action === 'string' && action.startsWith('fixed:')) {
+      const newEmail = action.slice(6).trim();
+      return { ...r, status: 'valid', original: r.original, cleaned: newEmail, issue: `Manually fixed to: ${newEmail}`, _overridden: true, _originalStatus: r.status };
+    }
     return r;
   }), [results, overrides]);
 
@@ -68,28 +77,48 @@ function App() {
       return next;
     });
 
-    // Learn from feedback (skip if toggling off or no context)
-    if (isToggleOff || !originalResult || !action) return;
-    const domain = cleanedEmail.split('@')[1];
-    const learned = loadLearned();
-    learned.trustedDomains = learned.trustedDomains || [];
-    learned.trustedEmails  = learned.trustedEmails  || [];
-    learned.blockedEmails  = learned.blockedEmails  || [];
+    const fromStatus = originalResult?._originalStatus || originalResult?.status || 'unknown';
+    const toStatus   = action === 'approved' ? 'valid'
+                     : action === 'rejected' ? (fromStatus === 'valid' ? 'invalid' : 'valid')
+                     : typeof action === 'string' && action.startsWith('fixed:') ? 'valid'
+                     : 'unknown';
 
-    if (action === 'approved' || action === 'retrieved') {
+    setChangeLog(prev => [
+      ...prev,
+      {
+        id:         Date.now() + Math.random(),
+        email:      cleanedEmail,
+        action,
+        fromStatus,
+        toStatus,
+        undone:     isToggleOff,
+        time:       new Date(),
+      },
+    ]);
+
+    if (isToggleOff || !originalResult || !action) return;
+    const learned = loadLearned();
+    learned.trustedEmails = learned.trustedEmails || [];
+    learned.blockedEmails = learned.blockedEmails || [];
+
+    if (action === 'approved') {
       if (!learned.trustedEmails.includes(cleanedEmail)) learned.trustedEmails.push(cleanedEmail);
-      if (originalResult.issue && originalResult.issue.includes('Custom company domain')) {
-        if (!learned.trustedDomains.includes(domain)) learned.trustedDomains.push(domain);
-      }
       learned.blockedEmails = learned.blockedEmails.filter(e => e !== cleanedEmail);
     } else if (action === 'rejected') {
+      if (fromStatus === 'valid') {
+        // rejecting a valid decision → block it
+        if (!learned.blockedEmails.includes(cleanedEmail)) learned.blockedEmails.push(cleanedEmail);
+        learned.trustedEmails = learned.trustedEmails.filter(e => e !== cleanedEmail);
+      } else {
+        // rejecting an invalid decision → trust it
+        if (!learned.trustedEmails.includes(cleanedEmail)) learned.trustedEmails.push(cleanedEmail);
+        learned.blockedEmails = learned.blockedEmails.filter(e => e !== cleanedEmail);
+      }
+    } else if (typeof action === 'string' && action.startsWith('fixed:')) {
+      const newEmail = action.slice(6).trim();
+      // Trust the fixed email; block the broken original so it won't reappear
+      if (newEmail && !learned.trustedEmails.includes(newEmail)) learned.trustedEmails.push(newEmail);
       if (!learned.blockedEmails.includes(cleanedEmail)) learned.blockedEmails.push(cleanedEmail);
-      learned.trustedEmails  = learned.trustedEmails.filter(e => e !== cleanedEmail);
-      learned.trustedDomains = learned.trustedDomains.filter(d => d !== domain);
-    } else if (action === 'undone') {
-      // Undo fix: block the cleaned version so next run doesn't re-fix it
-      if (!learned.blockedEmails.includes(cleanedEmail)) learned.blockedEmails.push(cleanedEmail);
-      learned.trustedEmails = learned.trustedEmails.filter(e => e !== cleanedEmail);
     }
     saveLearned(learned);
   };
@@ -160,9 +189,13 @@ function App() {
           </div>
           {learnedInfo.count > 0 && (
             <span className="header-badge learned-badge" title={`Trusted domains: ${learnedInfo.trustedDomains.join(', ') || 'none'}`}>
-              🧠 AI learned {learnedInfo.count} pattern{learnedInfo.count !== 1 ? 's' : ''}
+              {/* 🧠 AI learned {learnedInfo.count} pattern{learnedInfo.count !== 1 ? 's' : ''} */}
             </span>
           )}
+          <button className="changelog-trigger-btn" onClick={() => setDrawerOpen(true)} title="View change log">
+            &#x1F4CB; Changes
+            {changeLog.length > 0 && <span className="changelog-trigger-count">{changeLog.length}</span>}
+          </button>
         </div>
       </header>
 
@@ -219,6 +252,13 @@ function App() {
       </main>
 
       {modal.open && <Modal title={modal.title} results={modalData} onClose={closeModal} overrides={overrides} onOverride={handleOverride} />}
+
+      <ChangeLogDrawer
+        log={changeLog}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onClear={() => setChangeLog([])}
+      />
 
       <footer className="app-footer">Email Sanitization Tool · 7-Layer Pipeline · Powered by Anthropic Claude</footer>
     </div>

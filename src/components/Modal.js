@@ -3,59 +3,77 @@ import StatusBadge from './StatusBadge';
 
 const PAGE_SIZE = 100;
 
-function ModalActionButtons({ row, overrides, onOverride }) {
-  const key    = row._overrideKey || row.cleaned || row.original;
-  const action = overrides[key];
+function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditingKey, editValue, setEditValue }) {
+  const key       = row._overrideKey || row.cleaned || row.original;
+  const action    = overrides[key];
   const rawStatus = row._originalStatus || row.status;
-  const status = action === 'undone' ? 'invalid' : rawStatus;
+  const isFixed   = typeof action === 'string' && action.startsWith('fixed:');
 
-  if (status === 'suspicious' || status === 'invalid' || status === 'blocked') {
+  // Inline fix editor
+  if (editingKey === key) {
+    const handleSave = () => {
+      const val = editValue.trim();
+      if (val) onOverride(key, `fixed:${val}`, row);
+      setEditingKey(null);
+    };
     return (
-      <div className="action-btns">
-        <button
-          className={`action-btn approve-btn ${action === 'approved' ? 'active' : ''}`}
-          title="Approve — move to Valid"
-          onClick={() => onOverride(key, 'approved', row)}
-        >✓ Approve</button>
-        <button
-          className={`action-btn reject-btn ${action === 'rejected' ? 'active' : ''}`}
-          title="Reject — confirm as-is"
-          onClick={() => onOverride(key, 'rejected', row)}
-        >✗ Reject</button>
+      <div className="fix-edit">
+        <input
+          className="fix-input"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter')  handleSave();
+            if (e.key === 'Escape') setEditingKey(null);
+          }}
+          autoFocus
+          placeholder="Type corrected email…"
+        />
+        <button className="action-btn fix-save-btn" onClick={handleSave} title="Save fix">✓</button>
+        <button className="action-btn fix-cancel-btn" onClick={() => setEditingKey(null)} title="Cancel">✕</button>
       </div>
     );
   }
 
-  if (status === 'fixed') {
-    return (
-      <div className="action-btns">
-        <button
-          className={`action-btn retrieve-btn ${action === 'retrieved' ? 'active' : ''}`}
-          title="Confirm fix — move to Valid"
-          onClick={() => onOverride(key, 'retrieved', row)}
-        >✓ Confirm</button>
-        <button
-          className={`action-btn reject-btn ${action === 'undone' ? 'active' : ''}`}
-          title="Undo fix — restore original"
-          onClick={() => onOverride(key, 'undone', row)}
-        >↩ Undo</button>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="action-btns">
+      <button
+        className={`action-btn approve-btn ${action === 'approved' ? 'active' : ''}`}
+        title="Approve — move to Valid"
+        onClick={() => onOverride(key, 'approved', row)}
+      >✓ Approve</button>
+      <button
+        className={`action-btn reject-btn ${action === 'rejected' ? 'active' : ''}`}
+        title="Reject — keep as Invalid"
+        onClick={() => onOverride(key, 'rejected', row)}
+      >✗ Reject</button>
+      <button
+        className={`action-btn fix-btn ${isFixed ? 'active' : ''}`}
+        title="Fix — manually correct this email"
+        onClick={() => {
+          setEditingKey(key);
+          setEditValue(isFixed ? action.slice(6) : row.original);
+        }}
+      >✎ Fix</button>
+    </div>
+  );
 }
 
 function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} }) {
-  const [page, setPage] = useState(1);
+  const [page, setPage]             = useState(1);
+  const [editingKey, setEditingKey] = useState(null);
+  const [editValue, setEditValue]   = useState('');
   const isDuplicate = title === 'Duplicate';
-  const isFixed     = title === 'Fixed';
+  const showActions = !isDuplicate;
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => { if (e.key === 'Escape' && !editingKey) onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, editingKey]);
+
+  // Reset edit state when page changes
+  useEffect(() => { setEditingKey(null); }, [page]);
 
   const totalPages = Math.ceil(results.length / PAGE_SIZE);
   const start      = (page - 1) * PAGE_SIZE;
@@ -76,31 +94,41 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
             <thead>
               <tr>
                 <th>#</th>
-                <th>Original Email</th>
-                {isFixed && <th>Cleaned Email</th>}
+                <th>Email</th>
                 <th>Status</th>
-                <th>Issue</th>
-                {!isDuplicate && <th>Actions</th>}
+                {title !== 'Valid' && <th>Issue</th>}
+                {showActions && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
+              {rows.map((row, i) => {
+                const isManuallyApproved = row.issue === 'Previously approved' || row.issue === 'Manually approved';
+                return (
                 <tr key={start + i} className={row._overridden ? 'row-overridden' : ''}>
                   <td className="modal-row-num">{start + i + 1}</td>
-                  <td className="modal-email original">{row.original}</td>
-                    {isFixed && (
-                    <td className="modal-email cleaned was-changed">{row.cleaned}</td>
-                  )}
+                  <td className="modal-email original">
+                    {row.original}
+                    {isManuallyApproved && <span className="manually-approved-tag">manually approved</span>}
+                  </td>
                   <td><StatusBadge status={row.status} /></td>
-                  <td className="modal-issue">{row.issue}</td>
-                  {!isDuplicate && (
+                  {title !== 'Valid' && <td className="modal-issue">{row.issue}</td>}
+                  {showActions && (
                     <td className="action-cell">
-                      <ModalActionButtons row={row} overrides={overrides} onOverride={onOverride} />
+                      <ModalActionButtons
+                        row={row}
+                        overrides={overrides}
+                        onOverride={onOverride}
+                        editingKey={editingKey}
+                        setEditingKey={setEditingKey}
+                        editValue={editValue}
+                        setEditValue={setEditValue}
+                      />
                       {row._overridden && <span className="overridden-tag">edited</span>}
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

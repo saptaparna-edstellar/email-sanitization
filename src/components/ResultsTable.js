@@ -16,8 +16,7 @@ function ResultsTable({ results }) {
           <thead>
             <tr>
               <th>#</th>
-              <th>Original Email</th>
-              <th>Cleaned Email</th>
+              <th>Email</th>
               <th>Status</th>
               <th>Issue</th>
             </tr>
@@ -26,11 +25,7 @@ function ResultsTable({ results }) {
             {rows.map((row, i) => (
               <tr key={start + i} className={`row-${row.status}${row._overridden ? ' row-overridden' : ''}`}>
                 <td className="row-num">{start + i + 1}</td>
-                <td className="email-cell original">{row.original}</td>
-                {row.status === 'fixed'
-                  ? <td className="email-cell cleaned was-changed">{row.cleaned}</td>
-                  : <td className="email-cell cleaned"><span className="cell-dash">—</span></td>
-                }
+                <td className="email-cell">{row.original}</td>
                 <td><StatusBadge status={row.status} /></td>
                 <td className="issue-cell">{row.issue}</td>
               </tr>
@@ -44,7 +39,7 @@ function ResultsTable({ results }) {
           <button className="page-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
           <span className="page-info">
             Page {page} of {totalPages.toLocaleString()}
-            <span className="page-range"> ({(start+1).toLocaleString()}–{Math.min(start+PAGE_SIZE, results.length).toLocaleString()} of {results.length.toLocaleString()})</span>
+            <span className="page-range"> ({(start + 1).toLocaleString()}–{Math.min(start + PAGE_SIZE, results.length).toLocaleString()} of {results.length.toLocaleString()})</span>
           </span>
           <button className="page-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
           <button className="page-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>

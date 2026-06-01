@@ -62,7 +62,7 @@ export async function runServerPipeline(rawEmails, learned = {}) {
 
     const typo = correctDomainTypo(email);
     if (typo.fixed) {
-      decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: `Domain typo — did you mean ${typo.corrected.split('@')[1]}?` });
+      decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: 'Domain typo' });
       continue;
     }
 

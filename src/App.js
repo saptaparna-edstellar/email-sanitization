@@ -49,7 +49,7 @@ function App() {
     const key    = r.cleaned || r.original;
     const action = overrides[key];
     if (!action) return r;
-    if (action === 'approved') return { ...r, status: 'valid', issue: 'Manually approved', _overridden: true, _originalStatus: r.status };
+    if (action === 'approved') return { ...r, issue: 'Manually approved', _overridden: true, _originalStatus: r.status };
     if (action === 'rejected') {
       const flipped = r.status === 'valid' ? 'invalid' : 'valid';
       const issue   = flipped === 'valid' ? 'Decision rejected — moved to valid' : 'Decision rejected — moved to invalid';
@@ -78,7 +78,7 @@ function App() {
     });
 
     const fromStatus = originalResult?._originalStatus || originalResult?.status || 'unknown';
-    const toStatus   = action === 'approved' ? 'valid'
+    const toStatus   = action === 'approved' ? fromStatus
                      : action === 'rejected' ? (fromStatus === 'valid' ? 'invalid' : 'valid')
                      : typeof action === 'string' && action.startsWith('fixed:') ? 'valid'
                      : 'unknown';
@@ -102,8 +102,13 @@ function App() {
     learned.blockedEmails = learned.blockedEmails || [];
 
     if (action === 'approved') {
-      if (!learned.trustedEmails.includes(cleanedEmail)) learned.trustedEmails.push(cleanedEmail);
-      learned.blockedEmails = learned.blockedEmails.filter(e => e !== cleanedEmail);
+      if (fromStatus === 'valid') {
+        if (!learned.trustedEmails.includes(cleanedEmail)) learned.trustedEmails.push(cleanedEmail);
+        learned.blockedEmails = learned.blockedEmails.filter(e => e !== cleanedEmail);
+      } else {
+        if (!learned.blockedEmails.includes(cleanedEmail)) learned.blockedEmails.push(cleanedEmail);
+        learned.trustedEmails = learned.trustedEmails.filter(e => e !== cleanedEmail);
+      }
     } else if (action === 'rejected') {
       if (fromStatus === 'valid') {
         // rejecting a valid decision → block it

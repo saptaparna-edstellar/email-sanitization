@@ -28,7 +28,7 @@ const TYPO_MAP = {
 const KNOWN_DOMAINS = [
   'gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com',
   'live.com','aol.com','protonmail.com','mail.com','yandex.com',
-  'zoho.com','msn.com','me.com','googlemail.com','ymail.com',
+  'zoho.com','msn.com','me.com','googlemail.com','ymail.com','yahoo.ca',
 ];
 
 function levenshtein(a, b) {

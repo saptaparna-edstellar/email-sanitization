@@ -5,22 +5,18 @@ import { correctDomainTypo }  from '../utils/correctTypos';
 import { checkBlocklist }     from '../utils/checkBlocklist';
 import { detectInvalidLocal } from '../utils/detectSuspicious';
 import { checkAllDomains }    from './serverMX';
-import { updateJob }          from './jobStore';
 
-export async function runServerPipeline(rawEmails, jobId, learned = {}) {
-  const update = (patch) => updateJob(jobId, patch);
-  const total  = rawEmails.length;
+export async function runServerPipeline(rawEmails, learned = {}) {
+  const total         = rawEmails.length;
   const trustedEmails = new Set(learned.trustedEmails || []);
   const blockedEmails = new Set(learned.blockedEmails || []);
   const fixedFrom     = learned.fixedFrom || {};
   const fixedTo       = learned.fixedTo   || {};
 
   // Step 1: Normalize
-  update({ phase: 'Normalizing…', current: 0, total });
   const normalized = rawEmails.map(normalizeEmail);
 
   // Step 2: Learned + syntax check
-  update({ phase: 'Checking syntax…' });
   const decided     = new Map();
   const syntaxValid = [];
 
@@ -35,7 +31,6 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
                     : 'Previously approved';
       const cleaned = fixedTo[email] || email;
       decided.set(email, { original: email, cleaned, status: 'valid', issue });
-      // already fully decided — do NOT push to syntaxValid or it gets overwritten by MX check
       continue;
     }
     const syntax = validateSyntax(email);
@@ -43,33 +38,28 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
     else syntaxValid.push(email);
   }
 
-  // Step 3: Deduplicate (only syntax-valid)
-  update({ phase: 'Removing duplicates…' });
+  // Step 3: Deduplicate
   const { unique, dupeMap } = deduplicateEmails(syntaxValid);
 
   // Step 4: Pattern + blocklist + typo checks
-  update({ phase: 'Checking patterns…', current: 0, total: unique.length });
   const needsMX = [];
 
   for (let i = 0; i < unique.length; i++) {
-    const email  = unique[i];
+    const email   = unique[i];
     const [local] = email.split('@');
 
-    // Invalid local patterns (fake, keyboard mash, role-based, etc.)
     const localIssue = detectInvalidLocal(local);
     if (localIssue) {
       decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: localIssue });
       continue;
     }
 
-    // Disposable / reserved / invalid TLD
     const block = checkBlocklist(email);
     if (block.invalid) {
       decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: block.reason });
       continue;
     }
 
-    // Domain typo detection
     const typo = correctDomainTypo(email);
     if (typo.fixed) {
       decided.set(email, { original: email, cleaned: email, status: 'invalid', issue: `Domain typo — did you mean ${typo.corrected.split('@')[1]}?` });
@@ -77,14 +67,10 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
     }
 
     needsMX.push(email);
-    if (i % 500 === 0) update({ current: i, total: unique.length });
   }
-  update({ current: unique.length, total: unique.length });
 
   // Step 5: MX check
-  update({ phase: 'Checking mail servers…', current: 0, total: needsMX.length });
   const mxResults = await checkAllDomains(needsMX);
-  update({ current: needsMX.length, total: needsMX.length });
 
   for (const email of needsMX) {
     const domain = email.split('@')[1];
@@ -94,7 +80,6 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
   }
 
   // Merge in original upload order
-  update({ phase: 'Finalizing…' });
   const seenInMerge = new Map();
   const merged = rawEmails.map(raw => {
     const norm     = normalizeEmail(raw);
@@ -114,5 +99,5 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
     return { ...result, original: displayOriginal };
   });
 
-  update({ status: 'done', phase: 'Complete', current: total, total, results: merged });
+  return merged;
 }

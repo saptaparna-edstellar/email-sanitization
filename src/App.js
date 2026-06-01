@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import UploadZone       from './components/UploadZone';
 import ResultsTable     from './components/ResultsTable';
 import StatsBar         from './components/StatsBar';
@@ -28,12 +28,9 @@ function App() {
   const [learnedInfo, setLearnedInfo]   = useState({ count: 0, trustedDomains: [] });
   const [changeLog, setChangeLog]       = useState([]);
   const [drawerOpen, setDrawerOpen]     = useState(false);
-  const pollRef                         = useRef(null);
 
   const openModal  = (title, filter) => setModal({ open: true, title, filter });
   const closeModal = () => setModal({ open: false, title: '', filter: null });
-
-  useEffect(() => () => clearInterval(pollRef.current), []);
 
   // Read localStorage only on client, re-sync after every override change
   useEffect(() => {
@@ -137,35 +134,10 @@ function App() {
   const handleEmailsLoaded = (loaded) => { setEmails(loaded); setResults([]); setError(''); setOverrides({}); };
   const handleLoadSample   = () => { setEmails(SAMPLE_EMAILS); setResults([]); setError(''); setOverrides({}); };
 
-  const startPolling = (jobId) => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/progress/${jobId}`);
-        if (!res.ok) throw new Error('Progress fetch failed');
-        const job = await res.json();
-        setProgress({ current: job.current, total: job.total, phase: job.phase });
-        if (job.status === 'done') {
-          clearInterval(pollRef.current);
-          setResults(Array.isArray(job.results) ? job.results : []);
-          setIsProcessing(false);
-        } else if (job.status === 'error') {
-          clearInterval(pollRef.current);
-          setError(`Processing failed: ${job.error}`);
-          setIsProcessing(false);
-        }
-      } catch (err) {
-        clearInterval(pollRef.current);
-        setError(`Connection error: ${err.message}`);
-        setIsProcessing(false);
-      }
-    }, 1000);
-  };
-
   const handleSanitize = async () => {
     if (emails.length === 0) return;
     setIsProcessing(true); setResults([]); setError(''); setOverrides({});
-    setProgress({ current: 0, total: emails.length, phase: 'Starting…' });
+    setProgress({ current: 0, total: emails.length, phase: 'Processing…' });
     const learned = loadLearned();
     try {
       const res = await fetch('/api/sanitize', {
@@ -174,10 +146,12 @@ function App() {
         body: JSON.stringify({ emails, learned }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Server error ${res.status}`); }
-      const { jobId } = await res.json();
-      startPolling(jobId);
+      const { results: data } = await res.json();
+      setResults(Array.isArray(data) ? data : []);
+      setProgress({ current: emails.length, total: emails.length, phase: 'Complete' });
     } catch (err) {
-      setError(`Failed to start: ${err.message}`);
+      setError(`Failed: ${err.message}`);
+    } finally {
       setIsProcessing(false);
     }
   };

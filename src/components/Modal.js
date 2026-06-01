@@ -9,7 +9,6 @@ function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditing
   const isFixed                                 = typeof action === 'string' && action.startsWith('fixed:');
   const [confirmingReject, setConfirmingReject] = useState(false);
 
-  // Inline fix editor
   if (editingKey === key) {
     const handleSave = () => {
       const val = editValue.trim();
@@ -35,7 +34,6 @@ function ModalActionButtons({ row, overrides, onOverride, editingKey, setEditing
     );
   }
 
-  // Reject confirmation
   if (confirmingReject) {
     return (
       <div className="reject-confirm">
@@ -80,36 +78,133 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
   const [page, setPage]             = useState(1);
   const [editingKey, setEditingKey] = useState(null);
   const [editValue, setEditValue]   = useState('');
+  const [selected, setSelected]     = useState(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(null); // null | 'selected' | 'all'
+
   const isDuplicate = title === 'Duplicate';
   const showActions = !isDuplicate;
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape' && !editingKey) onClose(); };
+    const handler = (e) => { if (e.key === 'Escape' && !editingKey && !bulkConfirm) onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, editingKey]);
+  }, [onClose, editingKey, bulkConfirm]);
 
-  // Reset edit state when page changes
-  useEffect(() => { setEditingKey(null); }, [page]);
+  useEffect(() => { setEditingKey(null); setSelected(new Set()); }, [page]);
 
-  const totalPages = Math.ceil(results.length / PAGE_SIZE);
-  const start      = (page - 1) * PAGE_SIZE;
-  const rows       = results.slice(start, start + PAGE_SIZE);
+  const totalPages  = Math.ceil(results.length / PAGE_SIZE);
+  const start       = (page - 1) * PAGE_SIZE;
+  const rows        = results.slice(start, start + PAGE_SIZE);
+  const pageKeys    = rows.map(r => r._overrideKey || r.cleaned || r.original);
+  const allPageSelected = pageKeys.length > 0 && pageKeys.every(k => selected.has(k));
+  const somePageSelected = pageKeys.some(k => selected.has(k));
+
+  const toggleRow = (key) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allPageSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        pageKeys.forEach(k => next.delete(k));
+        return next;
+      });
+    } else {
+      setSelected(prev => {
+        const next = new Set(prev);
+        pageKeys.forEach(k => next.add(k));
+        return next;
+      });
+    }
+  };
+
+  const executeBulkReject = (keys) => {
+    keys.forEach(key => {
+      const row = results.find(r => (r._overrideKey || r.cleaned || r.original) === key);
+      if (row) onOverride(key, 'rejected', row);
+    });
+    setSelected(new Set());
+    setBulkConfirm(null);
+  };
+
+  const selectedRows  = results.filter(r => selected.has(r._overrideKey || r.cleaned || r.original));
+  const allKeys       = results.map(r => r._overrideKey || r.cleaned || r.original);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
         <div className="modal-header">
           <div>
             <h2 className="modal-title">{title}</h2>
             <p className="modal-subtitle">{results.length.toLocaleString()} email{results.length !== 1 ? 's' : ''}</p>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <div className="modal-header-actions">
+            {showActions && (
+              <button
+                className="bulk-reject-all-btn"
+                onClick={() => setBulkConfirm('all')}
+                title="Reject all emails in this list"
+              >✗ Reject All</button>
+            )}
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
         </div>
+
+        {/* Bulk action bar */}
+        {showActions && selected.size > 0 && !bulkConfirm && (
+          <div className="bulk-bar">
+            <span className="bulk-bar-count">{selected.size} selected</span>
+            <button className="action-btn reject-btn" onClick={() => setBulkConfirm('selected')}>
+              ✗ Reject Selected
+            </button>
+            <button className="action-btn fix-cancel-btn" onClick={() => setSelected(new Set())}>
+              Clear
+            </button>
+          </div>
+        )}
+
+        {/* Bulk confirm bar */}
+        {bulkConfirm && (
+          <div className="bulk-bar bulk-bar-confirm">
+            <span className="bulk-bar-count">
+              {bulkConfirm === 'all'
+                ? `Reject all ${results.length} emails?`
+                : `Reject ${selected.size} selected email${selected.size !== 1 ? 's' : ''}?`}
+            </span>
+            <button
+              className="action-btn reject-btn active"
+              onClick={() => executeBulkReject(bulkConfirm === 'all' ? allKeys : [...selected])}
+            >Yes, Reject</button>
+            <button className="action-btn fix-cancel-btn" onClick={() => setBulkConfirm(null)}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Table */}
         <div className="modal-body">
           <table className="modal-table">
             <thead>
               <tr>
+                {showActions && (
+                  <th className="modal-checkbox-th">
+                    <input
+                      type="checkbox"
+                      className="modal-checkbox"
+                      checked={allPageSelected}
+                      ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+                      onChange={toggleAll}
+                      title="Select all on this page"
+                    />
+                  </th>
+                )}
                 <th>#</th>
                 <th>Email</th>
                 <th>Status</th>
@@ -119,36 +214,58 @@ function Modal({ title, results, onClose, overrides = {}, onOverride = () => {} 
             </thead>
             <tbody>
               {rows.map((row, i) => {
+                const key = row._overrideKey || row.cleaned || row.original;
                 const isManuallyApproved = row.issue === 'Previously approved' || row.issue === 'Manually approved';
+                const isSelected = selected.has(key);
                 return (
-                <tr key={start + i} className={row._overridden ? 'row-overridden' : ''}>
-                  <td className="modal-row-num">{start + i + 1}</td>
-                  <td className="modal-email original">
-                    {row.original}
-                    {isManuallyApproved && <span className="manually-approved-tag">manually approved</span>}
-                  </td>
-                  <td><StatusBadge status={row.status} /></td>
-                  {title !== 'Valid' && <td className="modal-issue">{row.issue}</td>}
-                  {showActions && (
-                    <td className="action-cell">
-                      <ModalActionButtons
-                        row={row}
-                        overrides={overrides}
-                        onOverride={onOverride}
-                        editingKey={editingKey}
-                        setEditingKey={setEditingKey}
-                        editValue={editValue}
-                        setEditValue={setEditValue}
-                      />
-                      {row._overridden && <span className="overridden-tag">edited</span>}
+                  <tr
+                    key={start + i}
+                    className={`${row._overridden ? 'row-overridden' : ''} ${isSelected ? 'row-selected' : ''}`}
+                    onClick={showActions ? () => toggleRow(key) : undefined}
+                    style={showActions ? { cursor: 'pointer' } : {}}
+                  >
+                    {showActions && (
+                      <td className="modal-checkbox-td" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="modal-checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(key)}
+                        />
+                      </td>
+                    )}
+                    <td className="modal-row-num">{start + i + 1}</td>
+                    <td className="modal-email original">
+                      {row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
+                      {row.cleaned && row.cleaned !== row.original && (
+                        <span className="email-original-sub">{row.original}</span>
+                      )}
+                      {isManuallyApproved && <span className="manually-approved-tag">manually approved</span>}
                     </td>
-                  )}
-                </tr>
+                    <td><StatusBadge status={row.status} /></td>
+                    {title !== 'Valid' && <td className="modal-issue">{row.issue}</td>}
+                    {showActions && (
+                      <td className="action-cell" onClick={e => e.stopPropagation()}>
+                        <ModalActionButtons
+                          row={row}
+                          overrides={overrides}
+                          onOverride={onOverride}
+                          editingKey={editingKey}
+                          setEditingKey={setEditingKey}
+                          editValue={editValue}
+                          setEditValue={setEditValue}
+                        />
+                        {row._overridden && <span className="overridden-tag">edited</span>}
+                      </td>
+                    )}
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="pagination modal-pagination">
             <button className="page-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>

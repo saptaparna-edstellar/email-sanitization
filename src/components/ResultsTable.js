@@ -25,7 +25,12 @@ function ResultsTable({ results }) {
             {rows.map((row, i) => (
               <tr key={start + i} className={`row-${row.status}${row._overridden ? ' row-overridden' : ''}`}>
                 <td className="row-num">{start + i + 1}</td>
-                <td className="email-cell">{row.original}</td>
+                <td className="email-cell">
+                  {row.cleaned && row.cleaned !== row.original ? row.cleaned : row.original}
+                  {row.cleaned && row.cleaned !== row.original && (
+                    <span className="email-original-sub">{row.original}</span>
+                  )}
+                </td>
                 <td><StatusBadge status={row.status} /></td>
                 <td className="issue-cell">{row.issue}</td>
               </tr>

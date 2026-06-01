@@ -12,6 +12,8 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
   const total  = rawEmails.length;
   const trustedEmails = new Set(learned.trustedEmails || []);
   const blockedEmails = new Set(learned.blockedEmails || []);
+  const fixedFrom     = learned.fixedFrom || {};
+  const fixedTo       = learned.fixedTo   || {};
 
   // Step 1: Normalize
   update({ phase: 'Normalizing…', current: 0, total });
@@ -28,8 +30,12 @@ export async function runServerPipeline(rawEmails, jobId, learned = {}) {
       continue;
     }
     if (trustedEmails.has(email)) {
-      decided.set(email, { original: email, cleaned: email, status: 'valid', issue: 'Previously approved' });
-      syntaxValid.push(email);
+      const issue   = fixedFrom[email] ? `Previously fixed from ${fixedFrom[email]}`
+                    : fixedTo[email]   ? `Previously fixed to ${fixedTo[email]}`
+                    : 'Previously approved';
+      const cleaned = fixedTo[email] || email;
+      decided.set(email, { original: email, cleaned, status: 'valid', issue });
+      // already fully decided — do NOT push to syntaxValid or it gets overwritten by MX check
       continue;
     }
     const syntax = validateSyntax(email);

@@ -121,9 +121,15 @@ function App() {
       }
     } else if (typeof action === 'string' && action.startsWith('fixed:')) {
       const newEmail = action.slice(6).trim();
-      // Trust the fixed email; block the broken original so it won't reappear
+      // Trust both the original (typo) and the corrected email
+      if (!learned.trustedEmails.includes(cleanedEmail)) learned.trustedEmails.push(cleanedEmail);
       if (newEmail && !learned.trustedEmails.includes(newEmail)) learned.trustedEmails.push(newEmail);
-      if (!learned.blockedEmails.includes(cleanedEmail)) learned.blockedEmails.push(cleanedEmail);
+      learned.blockedEmails = learned.blockedEmails.filter(e => e !== cleanedEmail && e !== newEmail);
+      // Save both directions so pipeline can show the right message
+      learned.fixedFrom            = learned.fixedFrom || {};
+      learned.fixedTo              = learned.fixedTo   || {};
+      learned.fixedFrom[newEmail]  = cleanedEmail;
+      learned.fixedTo[cleanedEmail] = newEmail;
     }
     saveLearned(learned);
   };
@@ -192,10 +198,10 @@ function App() {
               <p className="header-sub">7-layer AI-powered email validation pipeline</p>
             </div>
           </div>
-          <button className="changelog-trigger-btn" onClick={() => setDrawerOpen(true)} title="View change log">
+          {/* <button className="changelog-trigger-btn" onClick={() => setDrawerOpen(true)} title="View change log">
             &#x1F4CB; Changes
             {changeLog.length > 0 && <span className="changelog-trigger-count">{changeLog.length}</span>}
-          </button>
+          </button> */}
         </div>
       </header>
 

@@ -619,6 +619,76 @@ body {
 .fix-btn:hover  { background: #fef08a; }
 .fix-btn.active { background: #ca8a04; color: #fff; border-color: #ca8a04; }
 
+/* ─── Modal header actions ───────────────────────────────────────────────── */
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bulk-reject-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  background: rgba(220,38,38,0.25);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.bulk-reject-all-btn:hover { background: rgba(220,38,38,0.5); }
+
+/* ─── Bulk action bar ────────────────────────────────────────────────────── */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.25rem;
+  background: #fef9c3;
+  border-bottom: 1px solid #fde047;
+  flex-shrink: 0;
+  animation: fadeIn 0.15s ease;
+}
+
+.bulk-bar-confirm {
+  background: #fee2e2;
+  border-bottom-color: #fca5a5;
+}
+
+.bulk-bar-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #713f12;
+  flex: 1;
+}
+
+.bulk-bar-confirm .bulk-bar-count { color: #7f1d1d; }
+
+/* ─── Checkboxes ─────────────────────────────────────────────────────────── */
+.modal-checkbox-th {
+  width: 36px;
+  padding-left: 1.25rem !important;
+}
+.modal-checkbox-td {
+  width: 36px;
+  padding-left: 1.25rem !important;
+}
+
+.modal-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+
+.row-selected td { background: #f5f3ff !important; }
+
+/* ─── Reject confirm inline ──────────────────────────────────────────────── */
 .reject-confirm {
   display: flex;
   align-items: center;
@@ -652,6 +722,15 @@ body {
   background: #fef9c3; color: #713f12;
   border: 1px solid #fde047; border-radius: 4px;
   padding: 0.05rem 0.3rem; vertical-align: middle;
+}
+
+.email-original-sub {
+  display: block;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 400;
+  margin-top: 0.15rem;
+  text-decoration: line-through;
 }
 
 .manually-approved-tag {
